@@ -10,3 +10,4 @@ data/logs/
 storage_nodes/*/data/*
 !storage_nodes/*/data/.gitkeep
 .pytest_cache/
+.DS_Store
