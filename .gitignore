@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+data/vault.db
+data/vault.db-wal
+data/vault.db-shm
+data/logs/
+storage_nodes/*/data/*
+!storage_nodes/*/data/.gitkeep
+.pytest_cache/

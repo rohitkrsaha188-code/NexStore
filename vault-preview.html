@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2563eb" />
+  <title>NexStore · Distributed Object Storage</title>
+  <style>
+/* ============ NexStore design system (blue & white, black text) ============ */
+:root {
+  --bg: #f4f8fe; --bg-2: #eaf1fb; --panel: #ffffff; --panel-2: #f1f6fd;
+  --line: #d7e3f4; --text: #0b1220; --muted: #51637a;
+  --accent: #2563eb; --accent-2: #1d4ed8; --ok: #16a34a; --warn: #b45309;
+  --danger: #dc2626; --purple: #7c3aed; --radius: 12px;
+  --mono: "SF Mono", "Cascadia Code", Consolas, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 500px at 80% -10%, rgba(37, 99, 235, 0.07), transparent),
+    radial-gradient(900px 400px at 10% -10%, rgba(14, 165, 233, 0.06), transparent),
+    var(--bg);
+  color: var(--text);
+  font: 14px/1.5 -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.topbar {
+  display: flex; align-items: center; gap: 1.5rem;
+  padding: 0.8rem 1.4rem;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 12px rgba(29, 78, 216, 0.06);
+  position: sticky; top: 0; z-index: 20;
+}
+.brand { display: flex; align-items: center; gap: 0.7rem; }
+.brand-mark { width: 42px; height: 42px; flex: none; }
+.brand-name { font-weight: 800; letter-spacing: 0.08em; font-size: 1.12rem; color: var(--accent-2); }
+.brand-sub { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+.nav { display: flex; gap: 0.15rem; flex-wrap: wrap; flex: 1; }
+.nav-link {
+  appearance: none; border: 0; background: transparent; color: var(--muted);
+  padding: 0.45rem 0.75rem; border-radius: 8px; cursor: pointer; font: inherit;
+  font-size: 0.86rem; transition: color .15s, background .15s;
+}
+.nav-link:hover { color: var(--accent-2); background: var(--panel-2); }
+.nav-link.active { color: var(--accent-2); background: var(--panel-2); box-shadow: inset 0 -2px 0 var(--accent); }
+.pill {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.32rem 0.75rem; border-radius: 999px; font-size: 0.75rem;
+  font-weight: 600; letter-spacing: 0.06em; border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pill-warn { color: #b45309; background: rgba(217, 119, 6, 0.09); border-color: rgba(217, 119, 6, 0.35); }
+.main { max-width: 1440px; margin: 0 auto; padding: 1.4rem; }
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1.1rem 1.25rem; margin-bottom: 1.4rem;
+  box-shadow: 0 6px 20px rgba(29, 78, 216, 0.07);
+}
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.panel-head h2 { margin: 0; font-size: 0.95rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.panel-hint { font-size: 0.75rem; color: var(--muted); }
+.dash-columns { display: grid; grid-template-columns: 1.6fr 1fr; gap: 1.4rem; align-items: start; }
+.btn {
+  appearance: none; border: 1px solid var(--line); background: #fff;
+  color: var(--text); padding: 0.5rem 0.9rem; border-radius: 8px; cursor: pointer;
+  font: inherit; font-size: 0.85rem; transition: transform .1s, border-color .15s, background .15s;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:active { transform: translateY(1px); }
+.btn-danger { background: rgba(220, 38, 38, 0.07); border-color: rgba(220, 38, 38, 0.45); color: #b91c1c; }
+.btn-warn { background: rgba(217, 119, 6, 0.08); border-color: rgba(217, 119, 6, 0.45); color: #92400e; }
+.btn-success { background: rgba(22, 163, 74, 0.08); border-color: rgba(22, 163, 74, 0.45); color: #15803d; }
+.input {
+  background: #fff; border: 1px solid var(--line); color: var(--text);
+  padding: 0.5rem 0.7rem; border-radius: 8px; font: inherit; font-size: 0.86rem;
+}
+.select { min-width: 150px; }
+.bar { height: 8px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); overflow: hidden; min-width: 80px; }
+.bar-fill { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width .4s ease; }
+.util-row { display: grid; grid-template-columns: 90px 1fr 110px; gap: 0.8rem; align-items: center; margin-bottom: 0.65rem; }
+.util-row .label { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.util-row .value { font-family: var(--mono); font-size: 0.78rem; text-align: right; color: var(--text); }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.4rem; }
+.stat-card {
+  background: #fff;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1rem 1.1rem; box-shadow: 0 4px 14px rgba(29, 78, 216, 0.06);
+  border-top: 3px solid var(--accent);
+}
+.stat-card h3 { margin: 0 0 0.5rem; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.stat-value { font-size: 1.7rem; font-weight: 700; font-family: var(--mono); letter-spacing: -0.01em; color: var(--text); }
+.stat-value.danger { color: var(--danger); }
+.stat-value.warn { color: var(--warn); }
+.stat-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem; }
+.topology { padding: 0.5rem 0 0.2rem; }
+.topo-root { text-align: center; font-family: var(--mono); font-weight: 700; letter-spacing: 0.2em; color: var(--accent-2); font-size: 0.85rem; margin-bottom: 0.15rem; }
+.topo-router {
+  text-align: center; font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+  letter-spacing: 0.12em; padding: 0.35rem 0.8rem; border: 1px dashed var(--line);
+  border-radius: 8px; display: inline-block; margin: 0 auto 0.6rem;
+  position: relative; left: 50%; transform: translateX(-50%);
+  background: var(--panel-2);
+}
+.topo-trunk { height: 22px; position: relative; }
+.topo-trunk::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--line); transform: translateX(-50%); }
+.topo-trunk::after { content: ""; position: absolute; left: 10%; right: 10%; top: 100%; height: 2px; background: var(--line); }
+.topo-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.7rem; margin-top: 22px; }
+.topo-node { position: relative; text-align: center; padding-top: 20px; cursor: pointer; }
+.topo-node::before { content: ""; position: absolute; top: -2px; left: 50%; width: 2px; height: 22px; background: var(--line); transform: translateX(-50%); }
+.topo-box { border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.5rem; background: var(--panel-2); transition: border-color .15s, transform .15s, box-shadow .15s; }
+.topo-node:hover .topo-box { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 14px rgba(37, 99, 235, 0.12); }
+.topo-id { font-family: var(--mono); font-weight: 700; font-size: 0.78rem; color: var(--text); }
+.topo-status { margin-top: 0.4rem; width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.topo-status.online { background: var(--ok); box-shadow: 0 0 6px rgba(22, 163, 74, 0.7); animation: pulse 2.4s infinite; }
+.topo-status.failed { background: var(--danger); box-shadow: 0 0 6px rgba(220, 38, 38, 0.7); }
+.topo-meta { font-size: 0.66rem; color: var(--muted); margin-top: 0.35rem; font-family: var(--mono); }
+.overhead { display: grid; gap: 0.5rem; font-size: 0.82rem; }
+.overhead-row { display: flex; justify-content: space-between; gap: 1rem; }
+.overhead-row .k { color: var(--muted); }
+.overhead-row .v { font-family: var(--mono); color: var(--text); }
+.sim-controls { display: grid; gap: 0.7rem; }
+.sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.sim-result { font-size: 0.78rem; color: var(--muted); min-height: 1.2rem; font-family: var(--mono); white-space: pre-wrap; }
+.sim-result.ok { color: var(--ok); }
+.activity-feed { max-height: 320px; overflow-y: auto; display: grid; gap: 0.15rem; font-size: 0.8rem; }
+.feed-item { display: flex; gap: 0.6rem; padding: 0.32rem 0.4rem; border-radius: 6px; }
+.feed-item:hover { background: var(--panel-2); }
+.feed-time { color: var(--muted); font-family: var(--mono); font-size: 0.72rem; flex: none; padding-top: 0.1rem; }
+.feed-msg { color: var(--text); }
+.feed-item.ev-danger .feed-msg { color: #b91c1c; }
+.feed-item.ev-warn .feed-msg { color: #92400e; }
+.feed-item.ev-ok .feed-msg { color: #15803d; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (max-width: 1100px) { .dash-columns { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } .topo-row { grid-template-columns: repeat(2, 1fr); row-gap: 1.4rem; } .topo-trunk, .topo-node::before { display: none; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="42" height="42" role="img" aria-label="NexStore logo">
+          <defs>
+            <linearGradient id="nex-g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#1d4ed8"/>
+              <stop offset="1" stop-color="#38bdf8"/>
+            </linearGradient>
+          </defs>
+          <path d="M32 3 56 16.5v31L32 61 8 47.5v-31Z" fill="url(#nex-g)"/>
+          <path d="M32 8.5 51.5 19.5v25L32 55.5 12.5 44.5v-25Z" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
+          <path d="M21 44V20l22 24V20" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="21" cy="20" r="3.4" fill="#fff"/>
+          <circle cx="43" cy="20" r="3.4" fill="#fff"/>
+          <circle cx="43" cy="44" r="3.4" fill="#fff"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">NexStore</div>
+        <div class="brand-sub">Distributed Object Storage</div>
+      </div>
+    </div>
+    <nav class="nav" aria-label="Primary">
+      <button class="nav-link active">Dashboard</button>
+      <button class="nav-link">Objects</button>
+      <button class="nav-link">Storage Nodes</button>
+      <button class="nav-link">Replication</button>
+      <button class="nav-link">Repairs</button>
+      <button class="nav-link">Integrity</button>
+      <button class="nav-link">Rebalancing</button>
+      <button class="nav-link">Activity</button>
+      <button class="nav-link">Settings</button>
+    </nav>
+    <div class="topbar-right">
+      <span class="pill pill-warn" role="status"><span class="dot"></span> SYSTEM DEGRADED</span>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="stat-grid">
+      <article class="stat-card"><h3>TOTAL STORAGE</h3><div class="stat-value" id="stat-total">—</div><div class="stat-sub">capacity</div></article>
+      <article class="stat-card"><h3>USED STORAGE</h3><div class="stat-value" id="stat-used">—</div><div class="stat-sub" id="stat-used-pct"></div></article>
+      <article class="stat-card"><h3>AVAILABLE</h3><div class="stat-value" id="stat-available">—</div><div class="stat-sub">free capacity</div></article>
+      <article class="stat-card"><h3>ACTIVE NODES</h3><div class="stat-value" id="stat-nodes-online">—</div><div class="stat-sub" id="stat-nodes-sub"></div></article>
+      <article class="stat-card"><h3>FAILED NODES</h3><div class="stat-value danger" id="stat-nodes-failed">—</div><div class="stat-sub">+ partitioned</div></article>
+      <article class="stat-card"><h3>TOTAL OBJECTS</h3><div class="stat-value" id="stat-objects">—</div><div class="stat-sub" id="stat-replicas-sub"></div></article>
+      <article class="stat-card"><h3>REPAIR JOBS</h3><div class="stat-value warn" id="stat-repairs">—</div><div class="stat-sub" id="stat-repairs-sub"></div></article>
+      <article class="stat-card"><h3>REPLICATION</h3><div class="stat-value" id="stat-rf">—</div><div class="stat-sub" id="stat-overhead-sub"></div></article>
+    </div>
+
+    <div class="dash-columns">
+      <div class="panel">
+        <div class="panel-head"><h2>Storage Topology</h2><span class="panel-hint">click a node for details</span></div>
+        <div id="topology" class="topology"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Failure Simulator</h2><span class="panel-hint">calls the live backend</span></div>
+        <div class="sim-controls">
+          <select class="input select"><option>NODE 02 — FAILED</option></select>
+          <div class="sim-grid">
+            <button class="btn btn-danger">Simulate Node Failure</button>
+            <button class="btn btn-success">Restore Node</button>
+            <button class="btn btn-warn">Simulate Partition</button>
+            <button class="btn btn-success">Reconnect Node</button>
+            <button class="btn btn-warn">Corrupt Replica</button>
+            <button class="btn">Integrity Scan</button>
+            <button class="btn">Trigger Rebalance</button>
+            <button class="btn">Run Repairs Now</button>
+          </div>
+          <div class="sim-result ok">● Node node2 marked FAILED (simulated crash); 2 degraded object(s) detected, 2 repair job(s) queued</div>
+        </div>
+        <div class="panel-head" style="margin-top:1.25rem"><h2>Storage Overhead</h2></div>
+        <div id="overhead" class="overhead"></div>
+      </div>
+    </div>
+
+    <div class="dash-columns">
+      <div class="panel">
+        <div class="panel-head"><h2>Node Utilization</h2></div>
+        <div id="util-bars"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Live Activity</h2><span class="panel-hint">streaming</span></div>
+        <div id="activity-feed" class="activity-feed"></div>
+      </div>
+    </div>
+  </main>
+
+<script>
+function fmtBytes(n) {
+  if (n === null || n === undefined || Number.isNaN(Number(n))) return "—";
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+  let value = Number(n), unit = 0;
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; }
+  return `${value >= 100 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
+}
+function fmtTime(iso) { return iso ? new Date(iso).toLocaleTimeString([], { hour12: false }) : "—"; }
+
+const STATS = {
+  total_capacity: 50465865728, used_capacity: 0, available_capacity: 50465865728,
+  logical_storage: 4686, physical_storage: 14058, replication_overhead: 9372,
+  replication_factor: 3, total_objects: 5, total_replicas: 15,
+  nodes_total: 5, nodes_online: 4, nodes_failed: 1, nodes_partitioned: 0,
+  active_repair_jobs: 0, completed_repairs: 5, failed_repairs: 0,
+};
+const NODES = [
+  { name: "NODE 01", status: "ONLINE", used_capacity: 4686, replica_count: 5, utilization: 0.0 },
+  { name: "NODE 02", status: "FAILED", used_capacity: 0, replica_count: 0, utilization: 0.0 },
+  { name: "NODE 03", status: "ONLINE", used_capacity: 4686, replica_count: 5, utilization: 0.0 },
+  { name: "NODE 04", status: "ONLINE", used_capacity: 4686, replica_count: 5, utilization: 0.0 },
+  { name: "NODE 05", status: "ONLINE", used_capacity: 0, replica_count: 0, utilization: 0.0 },
+];
+const EVENTS = [
+  { message: "Repair repjob_obj_c40de632…_node2 -> COMPLETED", created_at: "2026-09-25T20:56:29.633402+00:00", cls: "ev-ok" },
+  { message: "Unrecoverable replica on node2 replaced by node4", created_at: "2026-09-25T20:56:29.633034+00:00", cls: "ev-warn" },
+  { message: "Replica created -> node4 (report.pdf)", created_at: "2026-09-25T20:56:29.632532+00:00", cls: "ev-ok" },
+  { message: "Repair repjob_obj_b50bf64d…_node2 -> COMPLETED", created_at: "2026-09-25T20:56:29.631061+00:00", cls: "ev-ok" },
+  { message: "Replica created -> node4 (photo.png)", created_at: "2026-09-25T20:56:29.630005+00:00", cls: "ev-ok" },
+  { message: "Node node2 marked FAILED (simulated crash)", created_at: "2026-09-25T20:56:24.680777+00:00", cls: "ev-danger" },
+  { message: "Object uploaded: photo.png (3100 bytes, RF=3)", created_at: "2026-09-25T20:56:24.671968+00:00", cls: "" },
+];
+
+document.getElementById("stat-total").textContent = fmtBytes(STATS.total_capacity);
+document.getElementById("stat-used").textContent = fmtBytes(STATS.used_capacity);
+document.getElementById("stat-used-pct").textContent = "0% of cluster";
+document.getElementById("stat-available").textContent = fmtBytes(STATS.available_capacity);
+document.getElementById("stat-nodes-online").textContent = `${STATS.nodes_online}/${STATS.nodes_total}`;
+document.getElementById("stat-nodes-sub").textContent = `${STATS.nodes_failed} failed · ${STATS.nodes_partitioned} partitioned`;
+document.getElementById("stat-nodes-failed").textContent = STATS.nodes_failed + STATS.nodes_partitioned;
+document.getElementById("stat-objects").textContent = STATS.total_objects.toLocaleString();
+document.getElementById("stat-replicas-sub").textContent = `${STATS.total_replicas} replicas · RF=${STATS.replication_factor}`;
+document.getElementById("stat-repairs").textContent = STATS.active_repair_jobs;
+document.getElementById("stat-repairs-sub").textContent = `${STATS.completed_repairs} completed · ${STATS.failed_repairs} failed`;
+document.getElementById("stat-rf").textContent = `${STATS.replication_factor}×`;
+const ohPct = STATS.logical_storage ? Math.round(100 * STATS.replication_overhead / STATS.logical_storage) : 0;
+document.getElementById("stat-overhead-sub").textContent = `overhead ${fmtBytes(STATS.replication_overhead)} (+${ohPct}%)`;
+
+document.getElementById("topology").innerHTML = `
+  <div class="topo-root">NEXSTORE</div>
+  <div class="topo-router">DISTRIBUTED ROUTER</div>
+  <div class="topo-trunk"></div>
+  <div class="topo-row">
+    ${NODES.map((n) => `
+      <div class="topo-node" tabindex="0" role="button">
+        <div class="topo-box">
+          <div class="topo-id">${n.name}</div>
+          <span class="topo-status ${n.status.toLowerCase()}"></span>
+          <div class="topo-meta">${Math.round(n.utilization)}% · ${n.replica_count} repl</div>
+        </div>
+      </div>`).join("")}
+  </div>`;
+
+document.getElementById("util-bars").innerHTML = NODES.map((n, i) => `
+  <div class="util-row">
+    <span class="label">node${i + 1}</span>
+    <div class="bar"><div class="bar-fill" style="width:${Math.min(n.utilization || 0, 100)}%"></div></div>
+    <span class="value">${(n.utilization || 0).toFixed(1)}% · ${fmtBytes(n.used_capacity)}</span>
+  </div>`).join("");
+
+document.getElementById("overhead").innerHTML = [
+  ["Logical storage (unique data)", fmtBytes(STATS.logical_storage)],
+  ["Physical storage (replicated)", fmtBytes(STATS.physical_storage)],
+  ["Replication overhead", fmtBytes(STATS.replication_overhead)],
+  ["Replication factor", `${STATS.replication_factor}×`],
+].map(([k, v]) => `<div class="overhead-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join("");
+
+document.getElementById("activity-feed").innerHTML = EVENTS.map((e) => `
+  <div class="feed-item ${e.cls}">
+    <span class="feed-time">${fmtTime(e.created_at)}</span>
+    <span class="feed-msg">${e.message}</span>
+  </div>`).join("");
+</script>
+</body>
+</html>

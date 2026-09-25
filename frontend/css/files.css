@@ -1,0 +1,20 @@
+/* ============ NexStore files / upload / settings ============ */
+.drop-zone {
+  border: 2px dashed var(--line-2); border-radius: 12px; padding: 2rem 1rem;
+  text-align: center; cursor: pointer; transition: border-color .15s, background .15s;
+  color: var(--muted);
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--accent); background: var(--accent-soft); color: var(--accent-2);
+}
+.drop-zone p { margin: 0.3rem 0; }
+.rf-label { display: grid; gap: 0.35rem; margin-top: 1rem; font-size: 0.82rem; color: var(--muted); }
+
+.upload-progress { margin-top: 1rem; display: grid; gap: 0.55rem; }
+.upline { display: grid; grid-template-columns: 92px 1fr; gap: 0.8rem; align-items: center; font-size: 0.78rem; color: var(--muted); }
+.upline.done span::after { content: " ✓"; color: var(--ok); font-weight: 700; }
+
+.settings-form { display: grid; gap: 0.9rem; }
+.settings-form label { display: grid; gap: 0.35rem; font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+.hint { color: var(--faint); font-weight: 400; }
+.form-actions { display: flex; align-items: center; gap: 0.8rem; margin-top: 0.4rem; }

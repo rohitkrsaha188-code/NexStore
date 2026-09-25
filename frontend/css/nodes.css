@@ -1,0 +1,4 @@
+/* ============ NexStore nodes view helpers (kv grid, dialogs) ============ */
+.kv-grid { display: grid; grid-template-columns: auto 1fr; gap: 0.45rem 1.3rem; font-size: 0.85rem; }
+.kv-grid .k { color: var(--muted); }
+.kv-grid .v { font-family: var(--mono); text-align: right; word-break: break-all; color: var(--text); }
