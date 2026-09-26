@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 from backend.database import db, log_activity, utcnow
-from backend.exceptions import InvalidFilenameError, PayloadTooLargeError
+from backend.exceptions import InvalidFilenameError, PayloadTooLargeError, ValidationError
 from backend.config import settings
 from backend.replication.replica_manager import ReplicaManager
 from backend.storage.node_manager import NodeManager
@@ -21,16 +21,22 @@ MAX_FILENAME_LEN = 255
 
 
 def sanitize_filename(name: str) -> str:
-    """Strip path components and unsafe characters (path traversal defense)."""
-    name = (name or "").strip()
-    name = name.replace("\\", "/").split("/")[-1]
-    name = name.replace("\x00", "")
-    name = _UNSAFE.sub("_", name).strip(". ")
-    if not name:
+    """Normalize a relative path (``folder/sub/file.png``) into a safe stored filename.
+
+    Preserves folder structure (for folder uploads) but blocks path traversal:
+    absolute paths, ``..`` segments, drive letters and unsafe characters are
+    removed. The result is metadata-only — replica files are keyed by object_id.
+    """
+    name = (name or "").strip().replace("\\", "/")
+    name = re.sub(r"^[A-Za-z]:", "", name)  # windows drive letter
+    segments = [s for s in name.split("/") if s not in ("", ".", "..")]
+    segments = [_UNSAFE.sub("_", seg).strip(". ") or "_" for seg in segments]
+    if not segments:
         raise InvalidFilenameError("Filename is empty or invalid after sanitization")
-    if len(name) > MAX_FILENAME_LEN:
-        name = name[-MAX_FILENAME_LEN:]
-    return name
+    result = "/".join(segments)
+    if len(result) > MAX_FILENAME_LEN:
+        result = result[-MAX_FILENAME_LEN:]
+    return result
 
 
 class UploadService:

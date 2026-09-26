@@ -35,7 +35,7 @@ async def upload_file(
     file: UploadFile = File(...),
     replication_factor: int | None = Query(default=None, ge=1, le=5),
 ) -> dict:
-    filename = os.path.basename(file.filename or "upload.bin")
+    filename = (file.filename or "upload.bin").strip()
     content_type = file.content_type or "application/octet-stream"
 
     # Stream to a temp file so memory stays flat for large uploads.
@@ -69,7 +69,7 @@ async def upload_file_to_node(
 ) -> dict:
     """Add File To Node: pin the first replica to ``node_id``; the rest follow
     the normal least-utilized, never-co-located placement policy."""
-    filename = os.path.basename(file.filename or "upload.bin")
+    filename = (file.filename or "upload.bin").strip()
     content_type = file.content_type or "application/octet-stream"
 
     tmp = tempfile.NamedTemporaryFile(prefix="vault_up_", suffix=".bin", delete=False)

@@ -63,8 +63,6 @@
   function initNav() {
     $$(".side-link").forEach((link) =>
       link.addEventListener("click", () => switchView(link.dataset.view)));
-    $("#btn-hamburger")?.addEventListener("click", () =>
-      $("#sidebar").classList.toggle("open"));
   }
 
   function initActionButtons() {

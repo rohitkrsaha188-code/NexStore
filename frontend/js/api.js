@@ -63,7 +63,8 @@
 
     uploadFile: async (file, replicationFactor, onStage) => {
       const form = new FormData();
-      form.append("file", file, file.name);
+      const pathName = file.relativePath || file.webkitRelativePath || file.name;
+      form.append("file", file, pathName);
       const url = `/api/files/upload${replicationFactor ? `?replication_factor=${replicationFactor}` : ""}`;
       onStage && onStage("uploading", 15);
       const body = await request(url, { method: "POST", body: form });

@@ -99,7 +99,7 @@
   }
 
   /* ============ Upload ============ */
-  let selectedFile = null;
+  let selectedFiles = [];
 
   function initUpload() {
     const dialog = $("#upload-dialog");
@@ -107,11 +107,16 @@
     const input = $("#upload-input");
 
     $("#btn-upload").addEventListener("click", () => dialog.showModal());
-    dropZone.addEventListener("click", () => input.click());
+    dropZone.addEventListener("click", (e) => {
+      if (e.target.id === "browse-folder") { $("#upload-folder-input").click(); return; }
+      input.click();
+    });
+    const folderInput = $("#upload-folder-input");
+    folderInput.addEventListener("change", () => setFiles([...folderInput.files]));
     dropZone.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); }
     });
-    input.addEventListener("change", () => setFile(input.files[0]));
+    input.addEventListener("change", () => setFiles([...input.files]));
 
     ["dragover", "dragenter"].forEach((eventName) =>
       dropZone.addEventListener(eventName, (e) => {
@@ -125,7 +130,7 @@
         dropZone.classList.remove("dragover");
       })
     );
-    dropZone.addEventListener("drop", (e) => setFile(e.dataTransfer.files[0]));
+    dropZone.addEventListener("drop", (e) => setFiles(filesFromDataTransfer(e.dataTransfer)));
 
     $("#upload-form").addEventListener("submit", submitUpload);
     $$("[data-close]").forEach((button) =>
@@ -133,15 +138,50 @@
     );
   }
 
-  function setFile(file) {
-    if (!file) return;
-    selectedFile = file;
-    $("#upload-file-name").textContent = `${file.name} · ${fmtBytes(file.size)}`;
+  // Collect files from a drop, preserving relative folder paths (webkitRelativePath)
+  // and expanding dropped directories via the DataTransferItem API.
+  function filesFromDataTransfer(dt) {
+    const items = [...(dt.items || [])];
+    const entries = items.map((it) => (it.webkitGetAsEntry ? it.webkitGetAsEntry() : null));
+    if (entries.some(Boolean)) {
+      const collected = [];
+      const walk = (entry, prefix) =>
+        new Promise((resolve) => {
+          if (!entry) return resolve();
+          if (entry.isFile) {
+            entry.file((f) => {
+              Object.defineProperty(f, "relativePath", { value: prefix + entry.name });
+              collected.push(f);
+              resolve();
+            }, resolve);
+          } else if (entry.isDirectory) {
+            const reader = entry.createReader();
+            const readAll = () =>
+              reader.readEntries(async (batch) => {
+                if (!batch.length) return resolve();
+                await Promise.all(batch.map((child) => walk(child, `${prefix}${entry.name}/`)));
+                readAll();
+              }, resolve);
+            readAll();
+          } else resolve();
+        });
+      return Promise.all(entries.map((e) => walk(e, ""))).then(() => collected);
+    }
+    return Promise.resolve([...dt.files]);
+  }
+
+  function setFiles(files) {
+    files = (files || []).filter(Boolean);
+    if (!files.length) return;
+    selectedFiles = files;
+    const total = files.reduce((sum, f) => sum + f.size, 0);
+    const label = files.length === 1 ? files[0].name : `${files.length} files`;
+    $("#upload-file-name").textContent = `${label} · ${fmtBytes(total)}`;
   }
 
   async function submitUpload(event) {
     event.preventDefault();
-    if (!selectedFile) {
+    if (!selectedFiles.length) {
       toast("Choose a file first", "err");
       return;
     }
@@ -153,26 +193,49 @@
     result.textContent = "";
     $("#upload-submit").disabled = true;
 
-    try {
-      const response = await window.VaultAPI.uploadFile(selectedFile, rf, (stage, pct) => {
-        const index = { uploading: 0, hashing: 1, replicating: 2, verifying: 3 }[stage] ?? 3;
-        bars.forEach((bar, i) => {
-          bar.style.width = i < index ? "100%" : i === index ? `${pct}%` : "0%";
-          bar.parentElement.parentElement.classList.toggle("done", i <= index && pct === 100);
-        });
+    const setBar = (stage, pct) => {
+      const index = { uploading: 0, hashing: 1, replicating: 2, verifying: 3 }[stage] ?? 3;
+      bars.forEach((bar, i) => {
+        bar.style.width = i < index ? "100%" : i === index ? `${pct}%` : "0%";
+        bar.parentElement.parentElement.classList.toggle("done", i <= index && pct === 100);
       });
-      result.className = "sim-result ok";
-      result.textContent =
-        `✓ Stored on: ${response.placement.nodes.join(", ")}\n` +
-        `SHA-256 ${response.checksum.slice(0, 20)}… · RF=${response.replication_factor}`;
-      toast(`Uploaded ${response.filename}`, "ok");
-      selectedFile = null;
+    };
+
+    let ok = 0;
+    const failures = [];
+    const stored = [];
+    try {
+      for (let n = 0; n < selectedFiles.length; n += 1) {
+        const file = selectedFiles[n];
+        if (selectedFiles.length > 1) {
+          result.className = "sim-result";
+          result.textContent = `Uploading ${n + 1}/${selectedFiles.length}: ${file.name}`;
+        }
+        try {
+          const response = await window.VaultAPI.uploadFile(file, rf, setBar);
+          ok += 1;
+          stored.push(response.filename);
+        } catch (err) {
+          failures.push(`${file.name}: ${err.message}`);
+        }
+      }
+      if (failures.length) {
+        result.className = "sim-result err";
+        result.textContent = `✗ ${ok} uploaded, ${failures.length} failed\n${failures.slice(0, 5).join("\n")}`;
+        toast(`${failures.length} upload(s) failed`, "err");
+      } else {
+        result.className = "sim-result ok";
+        const head = selectedFiles.length === 1
+          ? `✓ Stored on: ${(stored[0] && ok && "") || ""}`
+          : `✓ ${ok} files stored`;
+        result.textContent = selectedFiles.length === 1
+          ? `✓ Uploaded ${selectedFiles[0].name}\nSHA-256 verified · RF=${rf}`
+          : `${head}\n${stored.slice(0, 5).join("\n")}${stored.length > 5 ? "\n…" : ""}`;
+        toast(`Uploaded ${ok} file(s)`, "ok");
+      }
+      selectedFiles = [];
       $("#upload-file-name").textContent = "No file selected";
       await Promise.all([refresh(), window.Dashboard.refresh(), window.Topology.refresh()]);
-    } catch (err) {
-      result.className = "sim-result err";
-      result.textContent = `✗ ${err.message}`;
-      toast(err.message, "err");
     } finally {
       $("#upload-submit").disabled = false;
     }

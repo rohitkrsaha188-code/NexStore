@@ -36,8 +36,8 @@ class NodeManager:
                 if existing:
                     conn.execute(
                         "UPDATE nodes SET status='ONLINE', network_status='CONNECTED', "
-                        "health_status='HEALTHY', last_heartbeat=? WHERE node_id=?",
-                        (now, node_id),
+                        "health_status='HEALTHY', last_heartbeat=?, capacity=? WHERE node_id=?",
+                        (now, _capacity_for(i), node_id),
                     )
                     continue
                 conn.execute(
@@ -193,10 +193,24 @@ def settings_node_count() -> int:
     return settings.node_count
 
 
+# Slight per-node variance keeps rebalancing scenarios realistic.
+_CAPACITY_FACTORS = {1: 1.0, 2: 1.0, 3: 0.9, 4: 1.0, 5: 0.8}
+
+
 def _capacity_for(index: int) -> int:
+    """Real usable free disk space, distributed across the simulated nodes.
+
+    All nodes share one physical volume, so the fleet total equals the actual
+    free space on disk (previously a fixed 10 GB demo value per node).
+    """
+    import shutil
+
     from backend.config import settings
 
-    base = settings.max_storage_per_node
-    # Slight per-node variance makes rebalancing scenarios realistic.
-    factors = {1: 1.0, 2: 1.0, 3: 0.9, 4: 1.0, 5: 0.8}
-    return int(base * factors.get(index, 1.0))
+    settings.ensure_dirs()
+    try:
+        free = shutil.disk_usage(settings.storage_root).free
+    except OSError:
+        free = int(settings.max_storage_per_node)
+    weight = _CAPACITY_FACTORS.get(index, 1.0) / sum(_CAPACITY_FACTORS.values())
+    return int(free * weight)

@@ -96,6 +96,7 @@
   }
 
   function init() {
+    // Header search launcher (pill button) + any legacy searchbox
     $("#searchbox")?.addEventListener("click", open);
     $("#global-search")?.addEventListener("focus", open);
     input.addEventListener("input", () => search(input.value));

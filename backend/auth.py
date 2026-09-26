@@ -82,14 +82,17 @@ def init_auth_schema() -> None:
             "SELECT user_id FROM users WHERE email=?", (DEMO_EMAIL,)
         ).fetchone()
         if not existing:
-            salt = secrets.token_hex(16)
-            conn.execute(
-                "INSERT INTO users(user_id, email, name, picture, provider, provider_sub, "
-                "password_salt, password_hash, created_at, last_login) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?)",
-                (f"user_{secrets.token_hex(10)}", DEMO_EMAIL, "Demo User", None,
-                 "local", None, salt, _hash_password("nexstore", salt), now, now),
-            )
+            try:
+                salt = secrets.token_hex(16)
+                conn.execute(
+                    "INSERT INTO users(user_id, email, name, picture, provider, provider_sub, "
+                    "password_salt, password_hash, created_at, last_login) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                    (f"user_{secrets.token_hex(10)}", DEMO_EMAIL, "Demo User", None,
+                     "local", None, salt, _hash_password("nexstore", salt), now, now),
+                )
+            except sqlite3.IntegrityError:
+                pass  # another process seeded it concurrently; fine
 
 
 def _expiry(days: int = SESSION_TTL_DAYS) -> str:

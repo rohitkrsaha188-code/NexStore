@@ -7,7 +7,7 @@
   <meta name="description" content="NexStore — fault-tolerant distributed object storage console" />
   <title>NexStore · Distributed Object Storage</title>
   <link rel="icon" type="image/svg+xml" href="/static/assets/logo.svg" />
-  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/style.css?v=10" />
   <link rel="stylesheet" href="/static/css/dashboard.css" />
   <link rel="stylesheet" href="/static/css/nodes.css" />
   <link rel="stylesheet" href="/static/css/files.css" />
@@ -203,14 +203,11 @@
     <!-- Main column -->
     <div class="content">
       <header class="topbar">
-        <button class="iconbtn hamburger" id="btn-hamburger" aria-label="Toggle navigation">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-        </button>
-        <div class="searchbox" id="searchbox" role="search">
+        <button class="search-launcher" id="searchbox" aria-label="Search (Ctrl+K)" title="Search — Ctrl+K">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input id="global-search" placeholder="Search nodes, objects, or enter command..." aria-label="Search" />
-          <span class="kbd">Ctrl + K</span>
-        </div>
+          <span class="sl-label">Search…</span>
+          <span class="kbd">Ctrl K</span>
+        </button>
         <div class="topbar-right">
           <div style="position:relative">
             <button class="iconbtn" id="btn-notifications" aria-label="Notifications">
@@ -471,11 +468,12 @@
   <dialog id="upload-dialog" class="dialog" aria-label="Upload object">
     <form id="upload-form" class="dialog-body">
       <h3 class="dialog-title">Upload Object</h3>
-      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Choose or drop a file">
-        <p><strong>Drop files here</strong> or <span style="color:var(--accent-2);font-weight:600">Browse Files</span></p>
+      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Choose or drop files or folders">
+        <p><strong>Drop files or folders here</strong> or <span style="color:var(--accent-2);font-weight:600">Browse Files</span> · <span id="browse-folder" style="color:var(--accent-2);font-weight:600;cursor:pointer">Browse Folder</span></p>
         <p class="hint" id="upload-file-name">No file selected</p>
       </div>
-      <input type="file" id="upload-input" hidden />
+      <input type="file" id="upload-input" multiple hidden />
+      <input type="file" id="upload-folder-input" webkitdirectory hidden />
       <label class="rf-label">Replication factor
         <input class="input" type="number" id="upload-rf" min="1" max="5" value="3" />
       </label>
